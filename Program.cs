@@ -115,9 +115,6 @@ bool IsValidMerchantId(string merchantId)
 
 async Task ShowOnboardingSubMenu()
 {
-    onboardingId = GetValidInput("Enter Onboarding ID (OB-xxxx-xxxx): ", IsValidOnboardingId);
-    if (string.IsNullOrEmpty(onboardingId)) return;
-
     while (true)
     {
         var onboardChoice = GetUserChoice("\nOnboarding Operations:\n1. Create Onboarding Request\n2. Retrieve Onboarding Status\n3. Cancel Onboarding Request\n4. Return to Main Menu\nEnter your choice: ");
@@ -125,7 +122,7 @@ async Task ShowOnboardingSubMenu()
         {
             case "1": await CreateOnboardingRequest(); break;
             case "2": await DisplayOnboardingStatus(); break;
-            case "3": await flipPayWebClient.CancelAnOnboardingRequest(onboardingId); break;
+            case "3": await CancelOnboardingRequest(); break;
             case "4": return;
             default: logger.LogError("Invalid choice. Please try again."); break;
         }
@@ -172,8 +169,17 @@ async Task CreateOnboardingRequest()
 
 async Task DisplayOnboardingStatus()
 {
+    onboardingId = GetValidInput("Enter Onboarding ID (OB-xxxx-xxxx): ", IsValidOnboardingId);
+    if (string.IsNullOrEmpty(onboardingId)) return;
     var response = await flipPayWebClient.RetrieveAnOnboardingRequest(onboardingId);
     LogAndDisplayInfo(response == null ? "Onboarding request not found." : $"Onboarding Status for {onboardingId}: {response.Status} \nURL: {response.OnboardingUrl} \nMerchant ID: {response.MerchantId ?? "Not yet created"}");
+}
+
+async Task CancelOnboardingRequest()
+{
+    onboardingId = GetValidInput("Enter Onboarding ID (OB-xxxx-xxxx): ", IsValidOnboardingId);
+    if (string.IsNullOrEmpty(onboardingId)) return;
+    await flipPayWebClient.CancelAnOnboardingRequest(onboardingId);
 }
 
 bool IsValidOnboardingId(string onboardingId)
