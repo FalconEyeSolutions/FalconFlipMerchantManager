@@ -22,10 +22,24 @@ ILogger logger = loggerFactory.CreateLogger<Program>();
 Console.WriteLine("Welcome to the Falcon Flip Merchant Manager!");
 
 // Load Configuration
+string companyName = LoadCompanyName();
 string token = LoadToken();
 bool demo = LoadDemoMode();
 
 #region Configuration Methods
+
+string LoadCompanyName()
+{
+    string loadedCompanyName = File.Exists("companyName.txt") ? File.ReadAllText("companyName.txt") : string.Empty;
+
+    if (string.IsNullOrEmpty(loadedCompanyName))
+    {
+        Console.WriteLine("Company Name not found.");
+        return PromptForStringSetting("Enter Company Name: ", "Company Name cannot be empty.", "companyName.txt");
+    }
+
+    return loadedCompanyName;
+}
 
 string LoadToken()
 {
@@ -159,7 +173,7 @@ async Task CreateOnboardingRequest()
 
     OnboardPostRequest onboardPostRequest = new(
         sendComms,
-        new("FalconFlipSolutions", "FES Support Team", "0423214730", "support@falconeyesolutions.com.au"),
+        new(companyName, string.Empty, string.Empty, string.Empty),
         new(receiverName, receiverEmail),
         null);
 
@@ -195,7 +209,7 @@ void ShowSettingsSubMenu()
 {
     while (true)
     {
-        var settingsChoice = GetUserChoice($"\nCurrent Introducer Token: {token} \nDemo Mode: {demo}\nSettings:\n1. Set Introducer Token\n2. Set Demo Mode\n3. Return to Main Menu\nEnter your choice: ");
+        var settingsChoice = GetUserChoice($"\nCompany Name: {companyName}\nIntroducer Token: {token}\nDemo Mode: {demo}\n\nSettings:\n1. Set Introducer Token\n2. Set Demo Mode\n3. Set Company Name\n4. Return to Main Menu\nEnter your choice: ");
 
         switch (settingsChoice)
         {
@@ -206,6 +220,9 @@ void ShowSettingsSubMenu()
                 demo = PromptForBoolSetting("Enter Demo Mode (true/false): ", "Invalid input. Please enter true or false.", "demo.txt");
                 break;
             case "3":
+                companyName = PromptForStringSetting("Enter Company Name: ", "Company Name cannot be empty.", "companyName.txt");
+                break;
+            case "4":
                 return;
             default:
                 Console.WriteLine("Invalid choice. Please try again.");
