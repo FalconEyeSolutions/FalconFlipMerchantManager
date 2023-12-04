@@ -16,7 +16,8 @@ using var loggerFactory = LoggerFactory.Create(builder =>
     .AddConsoleFormatter<CustomConsoleFormatter, ConsoleFormatterOptions>();
 });
 
-ILogger logger = loggerFactory.CreateLogger<Program>();
+ILogger<Program> programLogger = loggerFactory.CreateLogger<Program>();
+ILogger<FlipPayWebClient> flipPayWebClientLogger = loggerFactory.CreateLogger<FlipPayWebClient>();
 
 // Welcome User
 Console.WriteLine("Welcome to the Falcon Flip Merchant Manager!");
@@ -74,7 +75,13 @@ bool LoadDemoMode()
 var merchantId = string.Empty;
 var onboardingId = string.Empty;
 
-FlipPayWebClient flipPayWebClient = new(token, demo, logger);
+var flipPayConfig = new FlipPayConfig
+{
+    Token = LoadToken(),
+    IsDemo = LoadDemoMode()
+};
+
+var flipPayWebClient = new FlipPayWebClient(flipPayConfig, flipPayWebClientLogger);
 
 while (true)
 {
@@ -138,7 +145,7 @@ async Task ShowOnboardingSubMenu()
             case "2": await DisplayOnboardingStatus(); break;
             case "3": await CancelOnboardingRequest(); break;
             case "4": return;
-            default: logger.LogError("Invalid choice. Please try again."); break;
+            default: programLogger.LogError("Invalid choice. Please try again."); break;
         }
     }
 }
@@ -215,9 +222,11 @@ void ShowSettingsSubMenu()
         {
             case "1":
                 token = PromptForStringSetting("Enter Introducer Token: ", "Introducer Token cannot be empty.", "token.txt");
+                UpdateFlipPayWebClient();
                 break;
             case "2":
                 demo = PromptForBoolSetting("Enter Demo Mode (true/false): ", "Invalid input. Please enter true or false.", "demo.txt");
+                UpdateFlipPayWebClient();
                 break;
             case "3":
                 companyName = PromptForStringSetting("Enter Company Name: ", "Company Name cannot be empty.", "companyName.txt");
@@ -229,6 +238,19 @@ void ShowSettingsSubMenu()
                 break;
         }
     }
+}
+
+void UpdateFlipPayWebClient()
+{
+    // Update the FlipPayConfig with new settings
+    flipPayConfig.Token = token;
+    flipPayConfig.IsDemo = demo;
+
+    // Update the FlipPayWebClient instance
+    flipPayWebClient = new FlipPayWebClient(flipPayConfig, flipPayWebClientLogger);
+
+    // Make sure to get the garbage collector to clean up the old instance
+    GC.Collect();
 }
 
 string PromptForStringSetting(string prompt, string errorMessage, string fileName)
@@ -247,7 +269,7 @@ bool PromptForBoolSetting(string prompt, string errorMessage, string fileName)
         prompt,
         input => TryParseBool(input, out bool result),
         errorMessage,
-        input => bool.Parse(input),
+        bool.Parse,
         fileName);
 }
 
@@ -271,7 +293,7 @@ T PromptForSetting<T>(string prompt, Func<string, bool> validationFunc, string e
         }
         else
         {
-            logger.LogError(errorMessage);
+            programLogger.LogError(errorMessage);
         }
     }
 }
@@ -291,7 +313,7 @@ void SaveSettingToFile<T>(string fileName, T setting)
     }
     catch (IOException ex)
     {
-        logger.LogError($"Error writing to file: {ex.Message}");
+        programLogger.LogError($"Error writing to file: {ex.Message}");
     }
 }
 
@@ -307,13 +329,13 @@ string GetUserChoice(string message)
 
 void LogAndDisplayInfo(string message)
 {
-    logger.LogInformation("\n" + message);
+    programLogger.LogInformation("\n" + message);
     Thread.Sleep(1000);
 }
 
 void LogError(string message)
 {
-    logger.LogError("\n" + message);
+    programLogger.LogError("\n" + message);
     Thread.Sleep(1000);
 }
 
