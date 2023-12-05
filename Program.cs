@@ -1,5 +1,7 @@
 ﻿using FalconFlipMerchantManager;
 using FlipPayApiLibrary;
+using FlipPayApiLibrary.Models.Common;
+using FlipPayApiLibrary.Models.General;
 using FlipPayApiLibrary.Models.Link;
 using FlipPayApiLibrary.Models.Onboard;
 using Microsoft.Extensions.Logging;
@@ -85,14 +87,79 @@ var flipPayWebClient = new FlipPayWebClient(flipPayConfig, flipPayWebClientLogge
 
 while (true)
 {
-    var choice = GetUserChoice("\nMain Menu:\n1. Link Operations\n2. Onboarding Operations\n3. Settings\n4. Exit\nEnter your choice: ");
+    var choice = GetUserChoice("\nMain Menu:\n1. General Operations\n2. Link Operations\n3. Onboarding Operations\n4. Settings\n5. Exit\nEnter your choice: ");
     switch (choice)
     {
-        case "1": await ShowLinkSubMenu(); break;
-        case "2": await ShowOnboardingSubMenu(); break;
-        case "3": ShowSettingsSubMenu(); break;
-        case "4": ExitProgram(); return;
+        case "1": await ShowGeneralSubMenu(); break;
+        case "2": await ShowLinkSubMenu(); break;
+        case "3": await ShowOnboardingSubMenu(); break;
+        case "4": ShowSettingsSubMenu(); break;
+        case "5": ExitProgram(); return;
         default: LogError("Invalid choice. Please try again."); break;
+    }
+}
+
+#endregion
+
+#region General Operations
+
+async Task ShowGeneralSubMenu()
+{
+    merchantId = GetValidInput("Enter Merchant ID (M-xxxx-xxxx): ", IsValidMerchantId);
+    if (string.IsNullOrEmpty(merchantId)) return;
+
+    while (true)
+    {
+        var generalChoice = GetUserChoice("\nGeneral Operations:\n1. Retrieve Bank Accounts\n2. Retrieve Products Available\n3. Return to Main Menu\nEnter your choice: ");
+        switch (generalChoice)
+        {
+            case "1": await DisplayBankAccounts(); break;
+            case "2": await DisplayAvailableProducts(); break;
+            case "3": return;
+            default: LogError("Invalid choice. Please try again."); break;
+        }
+    }
+}
+
+async Task DisplayBankAccounts()
+{
+    var response = await flipPayWebClient.RetrieveBankAccounts(merchantId);
+    if (response == null)
+    {
+        LogAndDisplayInfo("Bank accounts not found.");
+        return;
+    }
+
+    LogAndDisplayInfo($"Bank accounts found: {response.Accounts.Count}");
+    LogAndDisplayInfo("Bank accounts:");
+
+    // Display bank accounts
+    foreach (var bankAccount in response.Accounts)
+    {
+        LogAndDisplayInfo($"Account ID: {bankAccount.AccountId}, Account Name: {bankAccount.AccountName}, Account Number: {bankAccount.AccountNumber}, Bsb: {bankAccount.Bsb}");
+    }
+}
+
+async Task DisplayAvailableProducts()
+{
+    var response = await flipPayWebClient.RetrieveProductsOnAMerchantAccount(merchantId);
+
+    if (response == null || response.Products == null)
+    {
+        LogAndDisplayInfo("Products not found.");
+        return;
+    }
+
+    LogAndDisplayInfo($"Products found: {response.Products.Count}");
+    LogAndDisplayInfo("Products:");
+
+    // Display products
+    foreach (var productInfo in response.Products)
+    {
+        LogAndDisplayInfo($"Product ID: {productInfo.ProductId}, Min Amount: {productInfo.MinAmount}, Max Amount: {productInfo.MaxAmount}");
+
+        if(productInfo.MerchantFacility != null)
+        LogAndDisplayInfo($"Merchant Facility: {productInfo.MerchantFacility}");
     }
 }
 
